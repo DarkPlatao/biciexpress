@@ -1,0 +1,2052 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BiciExpress - Entregador Pixel Art</title>
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Fontes Pixeladas Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-dark: #0e101c;
+      --panel-bg: #171a2b;
+      --panel-border: #303759;
+      --accent-yellow: #ffd166;
+      --accent-cyan: #38bdf8;
+      --accent-green: #22c55e;
+      --accent-red: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background-color: var(--bg-dark);
+      color: #f8fafc;
+      font-family: 'VT323', monospace;
+      overflow-x: hidden;
+      user-select: none;
+    }
+
+    .font-arcade {
+      font-family: 'Press Start 2P', monospace;
+    }
+
+    .font-retro {
+      font-family: 'VT323', monospace;
+    }
+
+    /* Pixel Art Nítida */
+    canvas {
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -webkit-crisp-edges;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    /* Bordas estilo janela arcade */
+    .pixel-box {
+      background-color: var(--panel-bg);
+      border: 3px solid var(--panel-border);
+      box-shadow: 0 4px 0 #07080f, inset 0 2px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    .pixel-btn {
+      border: 3px solid #090b14;
+      box-shadow: inset -3px -3px 0 rgba(0, 0, 0, 0.35), inset 3px 3px 0 rgba(255, 255, 255, 0.25), 0 3px 0 #07080f;
+      transition: transform 0.08s ease, filter 0.1s ease;
+    }
+
+    .pixel-btn:hover:not(:disabled) {
+      filter: brightness(1.1);
+    }
+
+    .pixel-btn:active:not(:disabled) {
+      transform: translateY(2px);
+      box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.35), inset 2px 2px 0 rgba(255, 255, 255, 0.2), 0 1px 0 #07080f;
+    }
+
+    .pixel-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    /* Sliders estilo arcade */
+    input[type="range"].retro-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #0b0d17;
+      height: 12px;
+      border: 2px solid #303759;
+      border-radius: 4px;
+      outline: none;
+    }
+
+    input[type="range"].retro-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 22px;
+      background: #ffd166;
+      border: 2px solid #090b14;
+      border-radius: 3px;
+      cursor: pointer;
+      box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.25);
+    }
+
+    input[type="range"].retro-slider::-moz-range-thumb {
+      width: 18px;
+      height: 22px;
+      background: #ffd166;
+      border: 2px solid #090b14;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Animação suave de alerta */
+    @keyframes blinkAlert {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.72; transform: scale(1.03); }
+    }
+    .animate-blink {
+      animation: blinkAlert 0.65s infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen lg:h-screen flex flex-col bg-[#0e101c] text-slate-100 lg:overflow-hidden">
+
+  <!-- ==================== BARRA SUPERIOR COMPACTA ==================== -->
+  <header class="w-full px-3 sm:px-4 py-2 bg-[#121526] border-b-4 border-[#272d4a] flex flex-wrap items-center justify-between gap-2 shrink-0 z-20">
+    <!-- Logo & Ciclo do Dia -->
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-amber-400 border-2 border-slate-950 flex items-center justify-center shadow-md shrink-0">
+        <span class="text-xl leading-none">🚲</span>
+      </div>
+      <div>
+        <h1 class="font-arcade text-xs sm:text-sm text-amber-300 tracking-wide leading-tight">BICIEXPRESS</h1>
+        <div class="flex items-center gap-2 text-base leading-none text-slate-300 mt-0.5">
+          <span id="dayCycleBadge" class="text-sky-300">☀️ Manhã</span>
+          <span class="text-slate-600">|</span>
+          <span id="btStatusMini" class="text-amber-300">Simulador ON</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dinheiro, Entregas e Combo -->
+    <div class="flex items-center gap-2 sm:gap-3">
+      <div class="px-2.5 py-1 rounded-lg bg-[#0b0d17] border-2 border-emerald-500/60 flex items-center gap-1.5">
+        <span class="text-emerald-400 text-lg">💵</span>
+        <span id="hudMoney" class="font-arcade text-xs sm:text-sm text-emerald-300 tabular-nums">R$ 0,00</span>
+      </div>
+      <div class="px-2.5 py-1 rounded-lg bg-[#0b0d17] border-2 border-amber-500/60 flex items-center gap-1.5">
+        <span class="text-amber-400 text-lg">🔥</span>
+        <span id="hudCombo" class="font-arcade text-xs sm:text-sm text-amber-300 tabular-nums">x1</span>
+      </div>
+      <div class="hidden md:flex px-2.5 py-1 rounded-lg bg-[#0b0d17] border-2 border-slate-700 items-center gap-1.5">
+        <span class="text-slate-400 text-base">Entregas:</span>
+        <span id="hudDeliveries" class="font-arcade text-xs text-white tabular-nums">0</span>
+      </div>
+    </div>
+
+    <!-- Botões de Ação (Som, Bluetooth, Simulador, Loja) -->
+    <div class="flex items-center gap-1.5 sm:gap-2">
+      <button id="btnSound" type="button" class="pixel-btn px-2.5 py-1.5 rounded-lg bg-slate-700 text-white text-sm font-arcade" title="Ativar/Desativar Som 8-bit">
+        🔊
+      </button>
+      <button id="btnBluetooth" type="button" class="pixel-btn px-2.5 py-1.5 rounded-lg bg-blue-600 text-white text-[10px] sm:text-xs font-arcade flex items-center gap-1.5">
+        <span>ᛒ</span><span id="btnBluetoothLabel" class="hidden sm:inline">Sensor BT</span>
+      </button>
+      <button id="btnToggleSim" type="button" class="pixel-btn px-2.5 py-1.5 rounded-lg bg-amber-500 text-slate-950 text-[10px] sm:text-xs font-arcade">
+        <span id="btnToggleSimLabel">SIM: ON</span>
+      </button>
+      <button id="btnOpenShopTop" type="button" class="pixel-btn px-2.5 py-1.5 rounded-lg bg-purple-600 text-white text-[10px] sm:text-xs font-arcade">
+        🛠️ Loja
+      </button>
+    </div>
+  </header>
+
+  <!-- ==================== NOTIFICAÇÃO / TOAST AMIGÁVEL (SEM ALERT) ==================== -->
+  <div id="toastContainer" class="fixed top-16 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+  <!-- ==================== ÁREA PRINCIPAL DO JOGO ==================== -->
+  <main class="flex-1 flex flex-col gap-2.5 p-2.5 sm:p-3 max-w-[1600px] w-full mx-auto min-h-0">
+
+    <!-- HUD DE CORRIDA: BARRA DE PROGRESSO + CRONÔMETRO + CARGA -->
+    <section class="pixel-box rounded-xl px-3 py-2 grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center shrink-0">
+      <!-- Pedido Atual e Progresso (Restaurante -> Cliente) -->
+      <div class="md:col-span-6 flex flex-col gap-1">
+        <div class="flex items-center justify-between text-base sm:text-lg leading-none">
+          <span id="hudOrderTitle" class="font-arcade text-[10px] sm:text-xs text-amber-300">AGUARDANDO PEDIDO...</span>
+          <span id="hudDistanceText" class="text-sky-300 tabular-nums font-bold">0m / 0m</span>
+        </div>
+        <!-- Barra de Rota -->
+        <div class="relative h-6 bg-[#0b0d17] border-2 border-[#303759] rounded-md flex items-center px-1.5">
+          <span class="text-sm z-10" title="Restaurante">🏪</span>
+          <div class="flex-1 mx-2 h-2.5 bg-slate-800 rounded-sm overflow-hidden relative">
+            <div id="progressBarFill" class="h-full bg-gradient-to-r from-cyan-400 to-emerald-400 transition-all duration-100" style="width: 0%;"></div>
+          </div>
+          <span class="text-sm z-10" title="Casa do Cliente">🏠</span>
+        </div>
+      </div>
+
+      <!-- Cronômetro -->
+      <div class="md:col-span-2 flex md:flex-col items-center justify-between md:justify-center bg-[#0b0d17] border-2 border-[#303759] rounded-lg px-3 py-1">
+        <span class="text-xs sm:text-sm text-slate-400 uppercase tracking-wider leading-none">Tempo</span>
+        <span id="hudTimer" class="font-arcade text-sm sm:text-base text-white tabular-nums mt-0.5">00:00</span>
+      </div>
+
+      <!-- Temperatura / Estabilidade / Peso -->
+      <div class="md:col-span-4 flex flex-col gap-1 bg-[#0b0d17] border-2 border-[#303759] rounded-lg px-3 py-1.5">
+        <div class="flex items-center justify-between text-sm leading-none">
+          <span id="hudCargoMetricLabel" class="font-arcade text-[9px] sm:text-[10px] text-orange-300">🌡️ TEMPERATURA</span>
+          <span id="hudCargoMetricVal" class="font-bold text-base text-white tabular-nums">100%</span>
+        </div>
+        <div class="w-full h-3 bg-slate-800 border border-slate-700 rounded-sm overflow-hidden">
+          <div id="hudCargoMetricBar" class="h-full bg-orange-400 transition-all duration-150" style="width: 100%;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CANVAS PRINCIPAL EM PIXEL ART -->
+    <section id="canvasWrapper" class="relative flex-1 min-h-[250px] sm:min-h-[320px] rounded-xl overflow-hidden border-4 border-[#303759] bg-[#0b0d17] shadow-2xl">
+      <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+      <!-- OVERLAY DE EVENTOS DINÂMICOS NO CANVAS (SEMÁFORO / CACHORRO / LADEIRA) -->
+      <div id="eventAlertOverlay" class="hidden absolute top-3 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-xl border-3 border-slate-950 shadow-xl flex items-center gap-3 animate-blink pointer-events-none">
+        <span id="eventAlertIcon" class="text-2xl">🚦</span>
+        <div>
+          <div id="eventAlertTitle" class="font-arcade text-[10px] sm:text-xs text-white">SEMÁFORO À FRENTE!</div>
+          <div id="eventAlertSub" class="text-base sm:text-lg text-slate-100 leading-none mt-0.5">Prepare-se para parar ou dar sprint!</div>
+        </div>
+      </div>
+
+      <!-- BADGE DE INCLINAÇÃO E PESO NO CANTO SUPERIOR ESQUERDO -->
+      <div class="absolute top-3 left-3 z-10 flex flex-wrap gap-2 pointer-events-none">
+        <div class="px-2.5 py-1 rounded-lg bg-slate-950/80 border-2 border-slate-700 flex items-center gap-1.5">
+          <span class="text-sm text-slate-400">Ladeira:</span>
+          <span id="hudSlope" class="font-arcade text-[10px] sm:text-xs text-emerald-400 tabular-nums">0.0%</span>
+        </div>
+        <div class="px-2.5 py-1 rounded-lg bg-slate-950/80 border-2 border-slate-700 hidden sm:flex items-center gap-1.5">
+          <span class="text-sm text-slate-400">Peso Total:</span>
+          <span id="hudWeight" class="font-arcade text-[10px] text-slate-200 tabular-nums">88kg</span>
+        </div>
+      </div>
+
+      <!-- DICA DE CADÊNCIA PARA SOPA/BOLO (QUANDO ATIVO) -->
+      <div id="cadenceGuideOverlay" class="hidden absolute top-3 right-3 z-10 px-2.5 py-1 rounded-lg bg-slate-950/85 border-2 border-cyan-400/70 text-sm sm:text-base text-cyan-200 pointer-events-none">
+        Zona Segura: <span class="font-bold text-emerald-300">65–90 RPM</span>
+      </div>
+
+      <!-- ==================== MODAL DE ESCOLHA DE PEDIDO ==================== -->
+      <div id="modalOrders" class="absolute inset-0 z-30 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-3 overflow-y-auto">
+        <div class="pixel-box rounded-2xl max-w-3xl w-full p-4 sm:p-5 flex flex-col gap-4 my-auto">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b-2 border-[#303759] pb-3">
+            <div>
+              <h2 class="font-arcade text-sm sm:text-base text-amber-300">ESCOLHA SUA ENTREGA</h2>
+              <p class="text-lg text-slate-300 leading-tight mt-1">Selecione um pedido para sair pedalando. Cada carga muda o estilo do treino!</p>
+            </div>
+            <button id="btnOpenShopFromModal" type="button" class="pixel-btn px-3 py-2 rounded-lg bg-purple-600 text-white font-arcade text-[10px] sm:text-xs">
+              🛠️ Upgrades
+            </button>
+          </div>
+
+          <!-- 3 Cartas de Pedido -->
+          <div id="ordersGrid" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <!-- Gerado dinamicamente via JS -->
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 text-base text-slate-400 pt-1">
+            <span>⌨️ Dica: <strong class="text-amber-300">W/S</strong> ou <strong class="text-amber-300">↑/↓</strong> ajustam Watts • <strong class="text-cyan-300">ESPAÇO</strong> dá Sprint!</span>
+            <button id="btnRerollOrders" type="button" class="text-sky-300 hover:text-sky-200 underline text-base cursor-pointer">
+              🔄 Novos pedidos
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== MODAL DE RESUMO DA ENTREGA ==================== -->
+      <div id="modalSummary" class="hidden absolute inset-0 z-30 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-3 overflow-y-auto">
+        <div class="pixel-box rounded-2xl max-w-md w-full p-5 flex flex-col gap-4 my-auto text-center">
+          <div id="summaryEmoji" class="text-4xl">🎉</div>
+          <h2 id="summaryTitle" class="font-arcade text-sm sm:text-base text-emerald-300">ENTREGA CONCLUÍDA!</h2>
+          <p id="summarySubtitle" class="text-lg text-slate-300 -mt-2"></p>
+
+          <div class="bg-[#0b0d17] border-2 border-[#303759] rounded-xl p-3.5 space-y-1.5 text-lg text-left">
+            <div class="flex justify-between">
+              <span class="text-slate-400">Pagamento Base:</span>
+              <span id="sumBase" class="text-white font-bold tabular-nums">R$ 0,00</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Gorjeta (Qualidade):</span>
+              <span id="sumTip" class="text-emerald-400 font-bold tabular-nums">+ R$ 0,00</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Bônus (Combo/Eventos):</span>
+              <span id="sumBonus" class="text-amber-300 font-bold tabular-nums">+ R$ 0,00</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Multas de Trânsito:</span>
+              <span id="sumFines" class="text-rose-400 font-bold tabular-nums">- R$ 0,00</span>
+            </div>
+            <div class="border-t-2 border-[#303759] pt-2 mt-2 flex justify-between items-center">
+              <span class="font-arcade text-xs text-amber-300">TOTAL GANHO:</span>
+              <span id="sumTotal" class="font-arcade text-sm text-emerald-300 tabular-nums">R$ 0,00</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            <button id="btnSummaryShop" type="button" class="pixel-btn py-2.5 px-3 rounded-xl bg-purple-600 text-white font-arcade text-[10px] sm:text-xs">
+              🛠️ LOJA
+            </button>
+            <button id="btnSummaryNext" type="button" class="pixel-btn py-2.5 px-3 rounded-xl bg-emerald-500 text-slate-950 font-arcade text-[10px] sm:text-xs">
+              PRÓXIMO ▶
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== MODAL DA LOJA DE UPGRADES ==================== -->
+      <div id="modalShop" class="hidden absolute inset-0 z-40 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-3 overflow-y-auto">
+        <div class="pixel-box rounded-2xl max-w-2xl w-full p-4 sm:p-5 flex flex-col gap-4 my-auto">
+          <div class="flex items-center justify-between border-b-2 border-[#303759] pb-3">
+            <div>
+              <h2 class="font-arcade text-sm sm:text-base text-purple-300">🛠️ OFICINA &amp; UPGRADES</h2>
+              <p class="text-lg text-slate-300 leading-tight mt-0.5">Melhore seu equipamento para ganhar mais velocidade e gorjetas!</p>
+            </div>
+            <div class="px-3 py-1 rounded-lg bg-[#0b0d17] border-2 border-emerald-500/60 font-arcade text-xs text-emerald-300 tabular-nums" id="shopMoneyDisplay">
+              R$ 0,00
+            </div>
+          </div>
+
+          <div id="shopItemsGrid" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <!-- Itens da loja renderizados via JS -->
+          </div>
+
+          <div class="flex justify-end pt-1">
+            <button id="btnCloseShop" type="button" class="pixel-btn px-4 py-2 rounded-xl bg-amber-400 text-slate-950 font-arcade text-xs">
+              VOLTAR
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== PAINEL INFERIOR: TELEMETRIA + SIMULADOR COMPACTO ==================== -->
+    <section class="pixel-box rounded-xl p-2.5 sm:p-3 grid grid-cols-1 lg:grid-cols-12 gap-3 items-center shrink-0">
+
+      <!-- Telemetria ao Vivo (Watts, RPM, km/h) -->
+      <div class="lg:col-span-4 grid grid-cols-3 gap-2">
+        <div class="bg-[#0b0d17] border-2 border-[#303759] rounded-lg px-2.5 py-1.5 text-center">
+          <div class="text-xs text-slate-400 uppercase tracking-wider leading-none">Potência</div>
+          <div class="font-arcade text-sm sm:text-base text-amber-400 tabular-nums mt-1"><span id="telPower">0</span><span class="text-[10px] text-amber-200/70">W</span></div>
+        </div>
+        <div class="bg-[#0b0d17] border-2 border-[#303759] rounded-lg px-2.5 py-1.5 text-center">
+          <div class="text-xs text-slate-400 uppercase tracking-wider leading-none">Cadência</div>
+          <div class="font-arcade text-sm sm:text-base text-emerald-400 tabular-nums mt-1"><span id="telCadence">0</span><span class="text-[10px] text-emerald-200/70">RPM</span></div>
+        </div>
+        <div class="bg-[#0b0d17] border-2 border-[#303759] rounded-lg px-2.5 py-1.5 text-center">
+          <div class="text-xs text-slate-400 uppercase tracking-wider leading-none">Velocidade</div>
+          <div class="font-arcade text-sm sm:text-base text-cyan-400 tabular-nums mt-1"><span id="telSpeed">0.0</span><span class="text-[9px] text-cyan-200/70">km/h</span></div>
+        </div>
+      </div>
+
+      <!-- Sliders do Modo Simulador -->
+      <div id="simSlidersContainer" class="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-3 transition-opacity">
+        <div class="flex flex-col gap-1">
+          <div class="flex justify-between text-base leading-none">
+            <span class="text-amber-300">⚡ Potência (Sim)</span>
+            <span id="sliderPowerText" class="font-bold text-white tabular-nums">160 W</span>
+          </div>
+          <input id="sliderPower" type="range" min="0" max="500" step="5" value="160" class="retro-slider w-full" />
+        </div>
+        <div class="flex flex-col gap-1">
+          <div class="flex justify-between text-base leading-none">
+            <span class="text-emerald-300">🔄 Cadência (Sim)</span>
+            <span id="sliderCadenceText" class="font-bold text-white tabular-nums">82 RPM</span>
+          </div>
+          <input id="sliderCadence" type="range" min="0" max="130" step="1" value="82" class="retro-slider w-full" />
+        </div>
+      </div>
+
+      <!-- Botões Rápidos de Ritmo + Sprint -->
+      <div id="simPresetsContainer" class="lg:col-span-3 flex flex-wrap sm:flex-nowrap items-center justify-center lg:justify-end gap-1.5 transition-opacity">
+        <button type="button" data-pace="stop" class="pace-btn pixel-btn flex-1 px-2 py-2 rounded-lg bg-slate-700 text-slate-100 text-sm sm:text-base leading-none font-bold" title="Parar no semáforo (0W)">
+          🛑 Parar
+        </button>
+        <button type="button" data-pace="cruise" class="pace-btn pixel-btn flex-1 px-2 py-2 rounded-lg bg-sky-600 text-white text-sm sm:text-base leading-none font-bold" title="Passeio (120W)">
+          🚲 120W
+        </button>
+        <button type="button" data-pace="hard" class="pace-btn pixel-btn flex-1 px-2 py-2 rounded-lg bg-amber-500 text-slate-950 text-sm sm:text-base leading-none font-bold" title="Ritmo Forte (240W)">
+          🔥 240W
+        </button>
+        <button type="button" data-pace="sprint" class="pace-btn pixel-btn flex-1 px-2 py-2 rounded-lg bg-rose-600 text-white text-sm sm:text-base leading-none font-bold" title="Sprint (380W) ou segure Espaço">
+          ⚡ 380W
+        </button>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- ==================== LÓGICA COMPLETA DO JOGO ==================== -->
+  <script>
+    /**
+     * =========================================================================
+     * BICIEXPRESS - ENTREGADOR PIXEL ART
+     * Módulos integrados em arquivo único:
+     *  1. Motor de Áudio 8-bit (Web Audio API)
+     *  2. Gerenciador Web Bluetooth (FTMS 0x1826, CPS 0x1818, CSC 0x1816)
+     *  3. Motor de Física de Ciclismo (Watts + Massa + Inclinação + Rolagem)
+     *  4. Sistema de Entregas, Eventos Dinâmicos (Semáforo, Cachorro, Ladeiras) & Loja
+     *  5. Renderizador Pixel Art 2D (Resolução interna baixa + Ciclo Dia/Noite)
+     * =========================================================================
+     */
+
+    // =========================================================================
+    // 1. MOTOR DE ÁUDIO 8-BIT (WEB AUDIO API)
+    // =========================================================================
+    const SoundFX = {
+      ctx: null,
+      enabled: true,
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+      },
+
+      tone(freq, duration, type = 'square', volume = 0.08, delay = 0) {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime + delay;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(volume, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + duration);
+      },
+
+      playCoin() {
+        this.tone(988, 0.08, 'square', 0.07, 0);
+        this.tone(1319, 0.18, 'square', 0.07, 0.07);
+      },
+
+      playBell() {
+        this.tone(1568, 0.09, 'triangle', 0.11, 0);
+        this.tone(2093, 0.16, 'triangle', 0.09, 0.08);
+      },
+
+      playAlert() {
+        this.tone(660, 0.09, 'square', 0.07, 0);
+        this.tone(880, 0.09, 'square', 0.07, 0.12);
+      },
+
+      playBark() {
+        this.tone(240, 0.06, 'sawtooth', 0.09, 0);
+        this.tone(170, 0.07, 'sawtooth', 0.09, 0.06);
+        this.tone(260, 0.06, 'sawtooth', 0.09, 0.17);
+        this.tone(180, 0.07, 'sawtooth', 0.09, 0.23);
+      },
+
+      playFine() {
+        this.tone(220, 0.14, 'sawtooth', 0.09, 0);
+        this.tone(165, 0.25, 'sawtooth', 0.09, 0.14);
+      },
+
+      playUpgrade() {
+        [523, 659, 784, 1046].forEach((f, i) => {
+          this.tone(f, 0.09, 'square', 0.07, i * 0.07);
+        });
+      },
+
+      playVictory() {
+        const notes = [523, 659, 784, 1046, 784, 1046];
+        const times = [0, 0.09, 0.18, 0.27, 0.40, 0.50];
+        const durs  = [0.08, 0.08, 0.08, 0.12, 0.08, 0.28];
+        notes.forEach((f, i) => this.tone(f, durs[i], 'square', 0.08, times[i]));
+      },
+    };
+
+    // =========================================================================
+    // 2. ESTADO GLOBAL DO JOGO E UPGRADES
+    // =========================================================================
+    const UPGRADE_CONFIG = {
+      bag: {
+        name: 'Mochila Térmica',
+        icon: '🎒',
+        desc: 'Mantém comida quente e protege carga frágil.',
+        levels: [
+          { cost: 0,   label: 'Nv.1 Básica',   heatLossMult: 1.0,  stabLossMult: 1.0,  color: '#ef4444' },
+          { cost: 45,  label: 'Nv.2 Térmica',  heatLossMult: 0.72, stabLossMult: 0.75, color: '#f59e0b' },
+          { cost: 110, label: 'Nv.3 Pro Aero', heatLossMult: 0.48, stabLossMult: 0.52, color: '#06b6d4' },
+        ],
+      },
+      frame: {
+        name: 'Quadro Carbono',
+        icon: '🚲',
+        desc: 'Deixa a bike mais leve para escalar ladeiras.',
+        levels: [
+          { cost: 0,   label: 'Nv.1 Aço (13kg)',     bikeKg: 13.0, color: '#38bdf8' },
+          { cost: 55,  label: 'Nv.2 Alumínio (10kg)',bikeKg: 10.0, color: '#a855f7' },
+          { cost: 130, label: 'Nv.3 Carbono (7.5kg)',bikeKg: 7.5,  color: '#facc15' },
+        ],
+      },
+      tires: {
+        name: 'Pneus Slick Pro',
+        icon: '🛞',
+        desc: 'Menor atrito: mais km/h com os mesmos Watts.',
+        levels: [
+          { cost: 0,   label: 'Nv.1 Urbano',    crr: 0.0055 },
+          { cost: 50,  label: 'Nv.2 Esportivo', crr: 0.0040 },
+          { cost: 120, label: 'Nv.3 Slick Pro', crr: 0.0028 },
+        ],
+      },
+    };
+
+    const DAY_PHASES = [
+      { name: 'Manhã',       icon: '☀️', skyTop: '#38bdf8', skyMid: '#7dd3fc', skyBot: '#fef08a', isNight: false, sunColor: '#fde047', sunY: 26 },
+      { name: 'Pôr do Sol',  icon: '🌇', skyTop: '#4c1d95', skyMid: '#db2777', skyBot: '#fb923c', isNight: false, sunColor: '#f97316', sunY: 62 },
+      { name: 'Noite',       icon: '🌙', skyTop: '#050816', skyMid: '#0f172a', skyBot: '#1e293b', isNight: true,  sunColor: '#e2e8f0', sunY: 24 },
+    ];
+
+    const state = {
+      // Fluxo de telas: 'orders' | 'playing' | 'summary' | 'shop'
+      phase: 'orders',
+      prevPhaseBeforeShop: 'orders',
+
+      // Progressão do jogador
+      money: 0,
+      combo: 1,
+      deliveriesDone: 0,
+      dayPhaseIndex: 0, // 0: Manhã, 1: Pôr do Sol, 2: Noite
+      upgrades: { bag: 0, frame: 0, tires: 0 }, // índices 0..2 (Nv.1..3)
+
+      // Entrada de sensores
+      isSimulator: true,
+      btConnected: false,
+      btDeviceName: '',
+      btHasDirectSpeed: false,
+      btDirectSpeedKmh: 0,
+
+      // Valores de controle do simulador e teclado
+      simPower: 160,
+      simCadence: 82,
+      spaceSprintActive: false,
+
+      // Telemetria instantânea
+      powerWatts: 160,
+      cadenceRpm: 82,
+      prevPowerWatts: 160,
+      speedKmh: 0,
+      slopePercent: 0,
+      riderWeightKg: 75,
+
+      // Estado da entrega ativa
+      currentOrder: null,
+      availableOrders: [],
+      distanceM: 0,
+      timeLeftSec: 0,
+      cargoHealth: 100, // Temperatura (Pizza) ou Estabilidade (Sopa) ou Integridade (Mercado)
+      runFines: 0,
+      runEventBonus: 0,
+      celebrationTimer: 0,
+
+      // Perfil de ladeiras e eventos da rota atual
+      slopeSegments: [],
+      trafficLights: [],
+      dogEvent: null,
+
+      // Animação e partículas
+      worldScrollM: 0,
+      crankAngle: 0,
+      wheelAngle: 0,
+      visualSlopeRad: 0,
+      confetti: [],
+      windParticles: [],
+      floatingTexts: [],
+    };
+
+    // Referências de DOM
+    const dom = {
+      dayCycleBadge: document.getElementById('dayCycleBadge'),
+      btStatusMini: document.getElementById('btStatusMini'),
+      hudMoney: document.getElementById('hudMoney'),
+      hudCombo: document.getElementById('hudCombo'),
+      hudDeliveries: document.getElementById('hudDeliveries'),
+
+      btnSound: document.getElementById('btnSound'),
+      btnBluetooth: document.getElementById('btnBluetooth'),
+      btnBluetoothLabel: document.getElementById('btnBluetoothLabel'),
+      btnToggleSim: document.getElementById('btnToggleSim'),
+      btnToggleSimLabel: document.getElementById('btnToggleSimLabel'),
+      btnOpenShopTop: document.getElementById('btnOpenShopTop'),
+
+      toastContainer: document.getElementById('toastContainer'),
+
+      hudOrderTitle: document.getElementById('hudOrderTitle'),
+      hudDistanceText: document.getElementById('hudDistanceText'),
+      progressBarFill: document.getElementById('progressBarFill'),
+      hudTimer: document.getElementById('hudTimer'),
+      hudCargoMetricLabel: document.getElementById('hudCargoMetricLabel'),
+      hudCargoMetricVal: document.getElementById('hudCargoMetricVal'),
+      hudCargoMetricBar: document.getElementById('hudCargoMetricBar'),
+      hudSlope: document.getElementById('hudSlope'),
+      hudWeight: document.getElementById('hudWeight'),
+      cadenceGuideOverlay: document.getElementById('cadenceGuideOverlay'),
+
+      eventAlertOverlay: document.getElementById('eventAlertOverlay'),
+      eventAlertIcon: document.getElementById('eventAlertIcon'),
+      eventAlertTitle: document.getElementById('eventAlertTitle'),
+      eventAlertSub: document.getElementById('eventAlertSub'),
+
+      modalOrders: document.getElementById('modalOrders'),
+      ordersGrid: document.getElementById('ordersGrid'),
+      btnOpenShopFromModal: document.getElementById('btnOpenShopFromModal'),
+      btnRerollOrders: document.getElementById('btnRerollOrders'),
+
+      modalSummary: document.getElementById('modalSummary'),
+      summaryEmoji: document.getElementById('summaryEmoji'),
+      summaryTitle: document.getElementById('summaryTitle'),
+      summarySubtitle: document.getElementById('summarySubtitle'),
+      sumBase: document.getElementById('sumBase'),
+      sumTip: document.getElementById('sumTip'),
+      sumBonus: document.getElementById('sumBonus'),
+      sumFines: document.getElementById('sumFines'),
+      sumTotal: document.getElementById('sumTotal'),
+      btnSummaryShop: document.getElementById('btnSummaryShop'),
+      btnSummaryNext: document.getElementById('btnSummaryNext'),
+
+      modalShop: document.getElementById('modalShop'),
+      shopMoneyDisplay: document.getElementById('shopMoneyDisplay'),
+      shopItemsGrid: document.getElementById('shopItemsGrid'),
+      btnCloseShop: document.getElementById('btnCloseShop'),
+
+      telPower: document.getElementById('telPower'),
+      telCadence: document.getElementById('telCadence'),
+      telSpeed: document.getElementById('telSpeed'),
+
+      simSlidersContainer: document.getElementById('simSlidersContainer'),
+      simPresetsContainer: document.getElementById('simPresetsContainer'),
+      sliderPower: document.getElementById('sliderPower'),
+      sliderPowerText: document.getElementById('sliderPowerText'),
+      sliderCadence: document.getElementById('sliderCadence'),
+      sliderCadenceText: document.getElementById('sliderCadenceText'),
+
+      canvasWrapper: document.getElementById('canvasWrapper'),
+      gameCanvas: document.getElementById('gameCanvas'),
+    };
+
+    // =========================================================================
+    // UTILITÁRIOS DE FORMATAÇÃO E TOAST (SEM ALERT())
+    // =========================================================================
+    function formatMoney(val) {
+      return `R$ ${val.toFixed(2).replace('.', ',')}`;
+    }
+
+    function formatClock(sec) {
+      const s = Math.max(0, Math.ceil(sec));
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+    }
+
+    function showToast(title, message, tone = 'info') {
+      const colors = {
+        info: 'bg-slate-900 border-sky-400 text-sky-100',
+        success: 'bg-emerald-950 border-emerald-400 text-emerald-100',
+        warn: 'bg-amber-950 border-amber-400 text-amber-100',
+        error: 'bg-rose-950 border-rose-400 text-rose-100',
+      };
+      const el = document.createElement('div');
+      el.className = `pointer-events-auto rounded-xl border-2 px-3.5 py-2.5 shadow-xl transition-all duration-300 ${colors[tone] || colors.info}`;
+      el.innerHTML = `<div class="font-arcade text-[10px] mb-1">${title}</div><div class="text-base leading-snug">${message}</div>`;
+      dom.toastContainer.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateX(20px)';
+        setTimeout(() => el.remove(), 300);
+      }, 4200);
+    }
+
+    function spawnFloatingText(text, color = '#fde047') {
+      state.floatingTexts.push({
+        text,
+        color,
+        x: 96,
+        y: 112,
+        vy: -24,
+        life: 1.5,
+      });
+    }
+
+    // =========================================================================
+    // 3. GERENCIADOR WEB BLUETOOTH (FTMS 0x1826, CPS 0x1818, CSC 0x1816)
+    // =========================================================================
+    const BluetoothManager = {
+      device: null,
+      server: null,
+      lastWheelRevs: null,
+      lastWheelTime: null,
+      lastCrankRevs: null,
+      lastCrankTime: null,
+      wheelCircM: 2.096,
+
+      async connect() {
+        if (!navigator.bluetooth) {
+          showToast(
+            'Web Bluetooth indisponível',
+            'Use Chrome, Brave ou Edge em HTTPS/localhost. Você pode jogar agora mesmo usando o Modo Simulador!',
+            'warn'
+          );
+          return;
+        }
+        try {
+          this.device = await navigator.bluetooth.requestDevice({
+            filters: [
+              { services: [0x1826] }, // FTMS
+              { services: [0x1818] }, // Cycling Power
+              { services: [0x1816] }, // Speed & Cadence
+            ],
+            optionalServices: [0x1826, 0x1818, 0x1816],
+          });
+
+          this.device.addEventListener('gattserverdisconnected', () => this.onDisconnected());
+          this.server = await this.device.gatt.connect();
+          state.btConnected = true;
+          state.btDeviceName = this.device.name || 'Sensor Bike';
+          state.btHasDirectSpeed = false;
+
+          let ok = false;
+          ok = (await this.subscribe(0x1826, 0x2AD2, (dv) => this.parseFTMS(dv))) || ok;
+          ok = (await this.subscribe(0x1818, 0x2A63, (dv) => this.parseCPS(dv))) || ok;
+          ok = (await this.subscribe(0x1816, 0x2A5B, (dv) => this.parseCSC(dv))) || ok;
+
+          if (ok) {
+            setSimulatorMode(false);
+            SoundFX.playBell();
+            showToast('Sensor Conectado!', `Recebendo dados de ${state.btDeviceName}.`, 'success');
+          } else {
+            showToast('Serviço não encontrado', 'Conectou ao dispositivo, mas sem dados padrão de ciclismo.', 'warn');
+          }
+          updateConnectionUI();
+        } catch (err) {
+          if (err.name !== 'NotFoundError') {
+            showToast('Erro no Bluetooth', `${err.message}. Continue no Modo Simulador ou ative chrome://flags/#enable-web-bluetooth no Linux.`, 'error');
+          }
+        }
+      },
+
+      async subscribe(serviceUuid, charUuid, parser) {
+        try {
+          const svc = await this.server.getPrimaryService(serviceUuid);
+          const ch = await svc.getCharacteristic(charUuid);
+          await ch.startNotifications();
+          ch.addEventListener('characteristicvaluechanged', (ev) => {
+            if (!state.isSimulator) parser(ev.target.value);
+          });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+
+      disconnect() {
+        if (this.device && this.device.gatt && this.device.gatt.connected) {
+          this.device.gatt.disconnect();
+        }
+      },
+
+      onDisconnected() {
+        state.btConnected = false;
+        state.btHasDirectSpeed = false;
+        this.lastWheelRevs = null;
+        this.lastCrankRevs = null;
+        setSimulatorMode(true);
+        updateConnectionUI();
+        showToast('Sensor Desconectado', 'Voltando automaticamente para o Modo Simulador.', 'warn');
+      },
+
+      parseFTMS(dv) {
+        try {
+          const flags = dv.getUint16(0, true);
+          let o = 2;
+          if ((flags & 0x0001) === 0 && o + 2 <= dv.byteLength) {
+            state.btDirectSpeedKmh = dv.getUint16(o, true) * 0.01;
+            state.btHasDirectSpeed = true;
+            o += 2;
+          }
+          if (flags & 0x0002) o += 2;
+          if ((flags & 0x0004) && o + 2 <= dv.byteLength) {
+            state.cadenceRpm = Math.round(dv.getUint16(o, true) * 0.5);
+            o += 2;
+          }
+          if (flags & 0x0008) o += 2;
+          if (flags & 0x0010) o += 3;
+          if (flags & 0x0020) o += 2;
+          if ((flags & 0x0040) && o + 2 <= dv.byteLength) {
+            state.powerWatts = Math.max(0, dv.getInt16(o, true));
+          }
+        } catch {}
+      },
+
+      parseCPS(dv) {
+        try {
+          const flags = dv.getUint16(0, true);
+          state.powerWatts = Math.max(0, dv.getInt16(2, true));
+          let o = 4;
+          if (flags & 0x0001) o += 1;
+          if (flags & 0x0004) o += 2;
+          if (flags & 0x0010) o += 6;
+          if ((flags & 0x0020) && o + 4 <= dv.byteLength) {
+            this.updateCrank(dv.getUint16(o, true), dv.getUint16(o + 2, true));
+          }
+        } catch {}
+      },
+
+      parseCSC(dv) {
+        try {
+          const flags = dv.getUint8(0);
+          let o = 1;
+          if ((flags & 0x01) && o + 6 <= dv.byteLength) {
+            const revs = dv.getUint32(o, true);
+            const t = dv.getUint16(o + 4, true);
+            o += 6;
+            if (this.lastWheelRevs !== null) {
+              const dR = (revs - this.lastWheelRevs) >>> 0;
+              const dT = (t - this.lastWheelTime) & 0xFFFF;
+              if (dT > 0 && dR > 0) {
+                const ms = (dR * this.wheelCircM) / (dT / 1024);
+                state.btDirectSpeedKmh = ms * 3.6;
+                state.btHasDirectSpeed = true;
+                if (state.powerWatts === 0) {
+                  state.powerWatts = Math.round(Math.pow(ms, 3) * 0.2 + ms * 3.2);
+                }
+              }
+            }
+            this.lastWheelRevs = revs;
+            this.lastWheelTime = t;
+          }
+          if ((flags & 0x02) && o + 4 <= dv.byteLength) {
+            this.updateCrank(dv.getUint16(o, true), dv.getUint16(o + 2, true));
+          }
+        } catch {}
+      },
+
+      updateCrank(revs, t) {
+        if (this.lastCrankRevs !== null) {
+          const dR = (revs - this.lastCrankRevs) & 0xFFFF;
+          const dT = (t - this.lastCrankTime) & 0xFFFF;
+          if (dT > 0 && dR > 0) {
+            const rpm = (dR / (dT / 1024)) * 60;
+            if (rpm <= 220) state.cadenceRpm = Math.round(rpm);
+          }
+        }
+        this.lastCrankRevs = revs;
+        this.lastCrankTime = t;
+      },
+    };
+
+    // =========================================================================
+    // 4. MOTOR DE FÍSICA DE CICLISMO
+    // =========================================================================
+    function getTotalMassKg() {
+      const bikeKg = UPGRADE_CONFIG.frame.levels[state.upgrades.frame].bikeKg;
+      const cargoKg = state.currentOrder ? state.currentOrder.extraKg : 2;
+      return state.riderWeightKg + bikeKg + cargoKg;
+    }
+
+    function calculateTargetSpeedKmh(powerWatts, slopePercent) {
+      const totalMass = getTotalMassKg();
+      const g = 9.8067;
+      const crr = UPGRADE_CONFIG.tires.levels[state.upgrades.tires].crr;
+      const rho = 1.225;
+      const cda = 0.34;
+      const eff = 0.96;
+
+      const theta = Math.atan(slopePercent / 100);
+      const fGravity = totalMass * g * Math.sin(theta);
+      const fRolling = totalMass * g * Math.cos(theta) * crr;
+      const fLinear = fGravity + fRolling;
+
+      const pEff = Math.max(0, powerWatts) * eff;
+      if (pEff <= 0.1 && fLinear >= 0) return 0;
+
+      const reqPower = (v) => (fLinear + 0.5 * rho * cda * v * v) * v;
+      let lo = 0, hi = 35;
+      for (let i = 0; i < 24; i++) {
+        const mid = (lo + hi) * 0.5;
+        if (reqPower(mid) < pEff) lo = mid;
+        else hi = mid;
+      }
+      return ((lo + hi) * 0.5) * 3.6;
+    }
+
+    // =========================================================================
+    // 5. GERADOR DE PEDIDOS, EVENTOS DA ROTA E LOJA
+    // =========================================================================
+    function generateOrders() {
+      const distPizza = 600 + Math.floor(Math.random() * 6) * 50;  // 600–850m
+      const distSoup  = 700 + Math.floor(Math.random() * 6) * 50;  // 700–950m
+      const distMarket= 650 + Math.floor(Math.random() * 6) * 50;  // 650–900m
+
+      const pizzaNames = ['Pizzaria Bella', 'Forno Express', 'Super Pepperoni'];
+      const soupNames  = ['Caldos da Vó', 'Confeitaria Doce', 'Ramen House'];
+      const marketNames= ['Mercadão Central', 'Hortifruti Bom', 'Empório Peso'];
+
+      state.availableOrders = [
+        {
+          id: 'pizza',
+          type: 'pizza',
+          badge: 'SPRINT',
+          badgeColor: 'bg-rose-500 text-white',
+          icon: '🍕',
+          name: pizzaNames[Math.floor(Math.random() * pizzaNames.length)],
+          desc: 'Tempo apertado! A pizza esfria rápido. Pedale forte para ganhar gorjeta alta.',
+          distanceM: distPizza,
+          timeLimitSec: Math.round(distPizza / 8.8) + 12,
+          basePay: Math.round(14 + (distPizza - 600) * 0.02),
+          maxTip: 18,
+          extraKg: 2,
+          metricLabel: '🌡️ TEMPERATURA',
+          metricColor: 'bg-orange-400',
+        },
+        {
+          id: 'soup',
+          type: 'soup',
+          badge: 'CADÊNCIA',
+          badgeColor: 'bg-cyan-500 text-slate-950',
+          icon: '🍲',
+          name: soupNames[Math.floor(Math.random() * soupNames.length)],
+          desc: 'Carga frágil! Mantenha entre 65 e 90 RPM sem trancos para não derramar.',
+          distanceM: distSoup,
+          timeLimitSec: Math.round(distSoup / 7.2) + 22,
+          basePay: Math.round(16 + (distSoup - 700) * 0.02),
+          maxTip: 20,
+          extraKg: 3,
+          metricLabel: '⚖️ ESTABILIDADE',
+          metricColor: 'bg-cyan-400',
+        },
+        {
+          id: 'market',
+          type: 'market',
+          badge: 'FORÇA +15kg',
+          badgeColor: 'bg-amber-400 text-slate-950',
+          icon: '🛒',
+          name: marketNames[Math.floor(Math.random() * marketNames.length)],
+          desc: 'Sacolas pesadas (+15 kg na física)! Subidas duras, mas pagamento base excelente.',
+          distanceM: distMarket,
+          timeLimitSec: Math.round(distMarket / 6.5) + 24,
+          basePay: Math.round(24 + (distMarket - 650) * 0.025),
+          maxTip: 12,
+          extraKg: 15,
+          metricLabel: '📦 INTEGRIDADE',
+          metricColor: 'bg-emerald-400',
+        },
+      ];
+
+      renderOrdersModal();
+    }
+
+    function renderOrdersModal() {
+      dom.ordersGrid.innerHTML = '';
+      state.availableOrders.forEach((order) => {
+        const card = document.createElement('div');
+        card.className = 'bg-[#0b0d17] border-2 border-[#303759] hover:border-amber-400 rounded-xl p-3.5 flex flex-col justify-between gap-2.5 transition cursor-pointer group';
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <span class="text-3xl">${order.icon}</span>
+              <span class="font-arcade text-[8px] px-2 py-1 rounded ${order.badgeColor}">${order.badge}</span>
+            </div>
+            <h3 class="font-arcade text-[11px] text-white group-hover:text-amber-300 transition leading-snug">${order.name}</h3>
+            <p class="text-base text-slate-300 leading-snug mt-1.5">${order.desc}</p>
+          </div>
+          <div class="space-y-1.5 border-t border-slate-800 pt-2 text-base">
+            <div class="flex justify-between">
+              <span class="text-slate-400">Distância:</span>
+              <span class="text-sky-300 font-bold">${order.distanceM} m</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Tempo Limite:</span>
+              <span class="text-amber-300 font-bold">${formatClock(order.timeLimitSec)}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Pagamento:</span>
+              <span class="text-emerald-400 font-bold">${formatMoney(order.basePay)} + gorjeta</span>
+            </div>
+            <button type="button" class="pixel-btn w-full mt-2 py-2 rounded-lg bg-emerald-500 text-slate-950 font-arcade text-[10px]">
+              ACEITAR PEDIDO
+            </button>
+          </div>
+        `;
+        card.addEventListener('click', () => startOrder(order));
+        dom.ordersGrid.appendChild(card);
+      });
+    }
+
+    function startOrder(order) {
+      SoundFX.init();
+      SoundFX.playBell();
+
+      state.currentOrder = order;
+      state.phase = 'playing';
+      state.distanceM = 0;
+      state.timeLeftSec = order.timeLimitSec;
+      state.cargoHealth = 100;
+      state.runFines = 0;
+      state.runEventBonus = 0;
+      state.celebrationTimer = 0;
+      state.confetti = [];
+      state.floatingTexts = [];
+      state.prevPowerWatts = state.powerWatts;
+
+      // Gera perfil de ladeiras
+      const total = order.distanceM;
+      const climbBoost = order.type === 'market' ? 2 : 0;
+      state.slopeSegments = [
+        { from: 0,           to: total * 0.22, slope: 0 },
+        { from: total * 0.22, to: total * 0.48, slope: 4 + climbBoost + Math.floor(Math.random() * 3) }, // +4% a +8%
+        { from: total * 0.48, to: total * 0.65, slope: -3 },                                             // Descida -3%
+        { from: total * 0.65, to: total * 0.85, slope: Math.random() > 0.4 ? (4 + climbBoost) : 0 },
+        { from: total * 0.85, to: total + 500,  slope: 0 },
+      ];
+
+      // Gera 1 ou 2 semáforos ao longo da rota
+      const light1Pos = Math.round(total * 0.36);
+      const light2Pos = Math.round(total * 0.72);
+      state.trafficLights = [
+        {
+          posM: light1Pos,
+          state: 'green', // green | yellow | red
+          timer: 4 + Math.random() * 3,
+          warned: false,
+          resolved: false,
+          waitedAtRed: false,
+        },
+        {
+          posM: light2Pos,
+          state: 'yellow',
+          timer: 3 + Math.random() * 2,
+          warned: false,
+          resolved: false,
+          waitedAtRed: false,
+        },
+      ];
+
+      // Gera 1 evento de cachorro correndo atrás (no meio da rota)
+      state.dogEvent = {
+        triggerM: Math.round(total * 0.54),
+        active: false,
+        done: false,
+        escapeProgress: 0, // precisa acumular 4.5s acima de 200W
+        timeLeft: 11,      // tempo antes do cachorro cansar e assustar o ciclista
+        dogOffsetX: -40,
+      };
+
+      // Atualiza UI
+      dom.modalOrders.classList.add('hidden');
+      dom.modalSummary.classList.add('hidden');
+      dom.modalShop.classList.add('hidden');
+      dom.hudOrderTitle.textContent = `${order.icon} ${order.name.toUpperCase()}`;
+      dom.hudCargoMetricLabel.textContent = order.metricLabel;
+      dom.hudCargoMetricBar.className = `h-full transition-all duration-150 ${order.metricColor}`;
+      dom.hudWeight.textContent = `${getTotalMassKg().toFixed(1)}kg`;
+
+      if (order.type === 'soup') {
+        dom.cadenceGuideOverlay.classList.remove('hidden');
+      } else {
+        dom.cadenceGuideOverlay.classList.add('hidden');
+      }
+    }
+
+    function finishDelivery(success) {
+      state.phase = 'summary';
+      dom.eventAlertOverlay.classList.add('hidden');
+      dom.cadenceGuideOverlay.classList.add('hidden');
+
+      const order = state.currentOrder;
+      let basePay = success ? order.basePay : Math.round(order.basePay * 0.3);
+      let tip = success ? Math.round((state.cargoHealth / 100) * order.maxTip) : 0;
+      let comboBonus = success && state.combo > 1 ? Math.round((basePay + tip) * (state.combo - 1) * 0.15) : 0;
+      let totalBonus = comboBonus + state.runEventBonus;
+      let totalEarned = Math.max(0, basePay + tip + totalBonus - state.runFines);
+
+      state.money += totalEarned;
+      if (success) {
+        state.deliveriesDone += 1;
+        state.combo = Math.min(5, state.combo + 1);
+        // Avança o ciclo do dia a cada entrega (Manhã -> Pôr do Sol -> Noite)
+        state.dayPhaseIndex = (state.dayPhaseIndex + 1) % DAY_PHASES.length;
+        SoundFX.playVictory();
+        spawnConfetti();
+      } else {
+        state.combo = 1;
+        SoundFX.playFine();
+      }
+
+      // Preenche o modal de resumo
+      dom.summaryEmoji.textContent = success ? '🎉' : '⏰';
+      dom.summaryTitle.textContent = success ? 'ENTREGA CONCLUÍDA!' : 'TEMPO ESGOTADO!';
+      dom.summaryTitle.className = `font-arcade text-sm sm:text-base ${success ? 'text-emerald-300' : 'text-rose-400'}`;
+      dom.summarySubtitle.textContent = success
+        ? `${order.name} entregue com ${Math.round(state.cargoHealth)}% de qualidade!`
+        : `Você atrasou a entrega de ${order.name}. Combo zerado.`;
+
+      dom.sumBase.textContent = formatMoney(basePay);
+      dom.sumTip.textContent = `+ ${formatMoney(tip)}`;
+      dom.sumBonus.textContent = `+ ${formatMoney(totalBonus)}`;
+      dom.sumFines.textContent = `- ${formatMoney(state.runFines)}`;
+      dom.sumTotal.textContent = formatMoney(totalEarned);
+
+      updateTopHUD();
+
+      // Mostra confetes por um instante antes de abrir o resumo
+      setTimeout(() => {
+        if (state.phase === 'summary') {
+          dom.modalSummary.classList.remove('hidden');
+        }
+      }, success ? 950 : 250);
+    }
+
+    function spawnConfetti() {
+      const colors = ['#facc15', '#38bdf8', '#f43f5e', '#4ade80', '#c084fc', '#fb923c'];
+      for (let i = 0; i < 65; i++) {
+        state.confetti.push({
+          x: 110 + (Math.random() - 0.5) * 80,
+          y: 80 + (Math.random() - 0.5) * 40,
+          vx: (Math.random() - 0.5) * 140,
+          vy: -40 - Math.random() * 110,
+          color: colors[i % colors.length],
+          size: Math.random() > 0.5 ? 3 : 2,
+          life: 2.5 + Math.random(),
+        });
+      }
+    }
+
+    // =========================================================================
+    // LOJA DE UPGRADES
+    // =========================================================================
+    function openShop() {
+      if (state.phase === 'shop') return;
+      state.prevPhaseBeforeShop = state.phase;
+      state.phase = 'shop';
+      renderShop();
+      dom.modalShop.classList.remove('hidden');
+    }
+
+    function closeShop() {
+      dom.modalShop.classList.add('hidden');
+      state.phase = state.prevPhaseBeforeShop;
+    }
+
+    function renderShop() {
+      dom.shopMoneyDisplay.textContent = formatMoney(state.money);
+      dom.shopItemsGrid.innerHTML = '';
+
+      Object.keys(UPGRADE_CONFIG).forEach((key) => {
+        const cfg = UPGRADE_CONFIG[key];
+        const currIdx = state.upgrades[key];
+        const currLvl = cfg.levels[currIdx];
+        const nextLvl = cfg.levels[currIdx + 1];
+        const isMax = !nextLvl;
+        const canAfford = !isMax && state.money >= nextLvl.cost;
+
+        const card = document.createElement('div');
+        card.className = 'bg-[#0b0d17] border-2 border-[#303759] rounded-xl p-3.5 flex flex-col justify-between gap-2.5';
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="text-3xl">${cfg.icon}</span>
+              <span class="font-arcade text-[9px] px-2 py-0.5 rounded bg-slate-800 text-amber-300">Nv.${currIdx + 1}/3</span>
+            </div>
+            <h3 class="font-arcade text-[11px] text-white mt-2">${cfg.name}</h3>
+            <p class="text-base text-slate-300 leading-snug mt-1">${cfg.desc}</p>
+            <div class="text-sm text-cyan-300 mt-1.5">Atual: ${currLvl.label}</div>
+          </div>
+          <div class="pt-2 border-t border-slate-800">
+            ${isMax
+              ? `<div class="w-full py-2 text-center font-arcade text-[10px] text-emerald-400 bg-emerald-950/50 rounded-lg border border-emerald-500/40">MÁXIMO ★</div>`
+              : `<button type="button" ${canAfford ? '' : 'disabled'}
+                  class="buy-btn pixel-btn w-full py-2 rounded-lg ${canAfford ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 text-slate-300'} font-arcade text-[9px]">
+                  COMPRAR ${formatMoney(nextLvl.cost)}
+                </button>`
+            }
+          </div>
+        `;
+
+        const btn = card.querySelector('.buy-btn');
+        if (btn && canAfford) {
+          btn.addEventListener('click', () => {
+            state.money -= nextLvl.cost;
+            state.upgrades[key] += 1;
+            SoundFX.playUpgrade();
+            updateTopHUD();
+            renderShop();
+            showToast('Upgrade Equipado!', `${cfg.name} evoluído para ${nextLvl.label}!`, 'success');
+          });
+        }
+        dom.shopItemsGrid.appendChild(card);
+      });
+    }
+
+    // =========================================================================
+    // 6. ATUALIZAÇÃO DE FÍSICA E EVENTOS NA RUA (UPDATE LOOP)
+    // =========================================================================
+    function getSlopeAtDistance(d) {
+      for (const seg of state.slopeSegments) {
+        if (d >= seg.from && d < seg.to) return seg.slope;
+      }
+      return 0;
+    }
+
+    function updateGame(dt) {
+      // Atualiza entrada de potência/cadência no modo simulador (+ Sprint via Espaço)
+      if (state.isSimulator) {
+        const sprintBoostW = state.spaceSprintActive ? 170 : 0;
+        const sprintBoostRpm = state.spaceSprintActive ? 24 : 0;
+        state.powerWatts = Math.min(500, state.simPower + sprintBoostW);
+        state.cadenceRpm = state.powerWatts === 0 ? 0 : Math.min(130, state.simCadence + sprintBoostRpm);
+      }
+
+      // Atualiza confetes e textos flutuantes mesmo no resumo
+      state.confetti = state.confetti.filter((c) => {
+        c.x += c.vx * dt;
+        c.y += c.vy * dt;
+        c.vy += 190 * dt;
+        c.life -= dt;
+        return c.life > 0;
+      });
+      state.floatingTexts = state.floatingTexts.filter((ft) => {
+        ft.y += ft.vy * dt;
+        ft.life -= dt;
+        return ft.life > 0;
+      });
+
+      // Se não estiver pedalando uma entrega, mantém uma animação leve de fundo
+      if (state.phase !== 'playing') {
+        state.visualSlopeRad += (0 - state.visualSlopeRad) * Math.min(1, dt * 5);
+        return;
+      }
+
+      const order = state.currentOrder;
+      state.slopePercent = getSlopeAtDistance(state.distanceM);
+
+      // Calcula velocidade alvo via física (ou direta do sensor se sem medidor de potência)
+      let targetSpeed = (!state.isSimulator && state.btHasDirectSpeed && state.powerWatts === 0)
+        ? state.btDirectSpeedKmh
+        : calculateTargetSpeedKmh(state.powerWatts, state.slopePercent);
+
+      // Inércia da bike (freia mais rápido quando jogador zera os Watts para parar no sinal)
+      const accelRate = state.powerWatts < 10 ? 3.8 : 2.1;
+      state.speedKmh += (targetSpeed - state.speedKmh) * (1 - Math.exp(-dt * accelRate));
+      if (state.speedKmh < 0.25 && targetSpeed === 0) state.speedKmh = 0;
+
+      const speedMs = state.speedKmh / 3.6;
+      const prevDist = state.distanceM;
+      state.distanceM += speedMs * dt;
+      state.worldScrollM += speedMs * dt;
+      state.timeLeftSec -= dt;
+
+      // Rotação do pedivela e das rodas
+      state.crankAngle = (state.crankAngle + (state.cadenceRpm / 60) * Math.PI * 2 * dt) % (Math.PI * 2);
+      state.wheelAngle = (state.wheelAngle + (speedMs / 0.34) * dt) % (Math.PI * 2);
+
+      // Suavização da inclinação visual no Canvas
+      const targetVisualRad = Math.atan((state.slopePercent / 100) * 1.45);
+      state.visualSlopeRad += (targetVisualRad - state.visualSlopeRad) * Math.min(1, dt * 5);
+
+      // Partículas de vento no sprint (> 32 km/h)
+      if (state.speedKmh > 32 && Math.random() < 0.45) {
+        state.windParticles.push({
+          x: 385,
+          y: 85 + Math.random() * 55,
+          len: 12 + Math.random() * 18,
+          speed: 220 + state.speedKmh * 4,
+        });
+      }
+      state.windParticles = state.windParticles.filter((w) => {
+        w.x -= w.speed * dt;
+        return w.x + w.len > 0;
+      });
+
+      // --- MECÂNICAS ESPECÍFICAS DA CARGA ---
+      const bagCfg = UPGRADE_CONFIG.bag.levels[state.upgrades.bag];
+
+      if (order.type === 'pizza') {
+        // Temperatura cai constantemente; upgrade de mochila reduz a perda
+        const lossPerSec = 1.45 * bagCfg.heatLossMult;
+        state.cargoHealth = Math.max(0, state.cargoHealth - lossPerSec * dt);
+      } else if (order.type === 'soup') {
+        // Controle de cadência: > 95 RPM ou pico brusco de Watts derruba estabilidade
+        const powerSpike = Math.abs(state.powerWatts - state.prevPowerWatts);
+        if (state.cadenceRpm > 95) {
+          const excess = (state.cadenceRpm - 95) * 0.45 * bagCfg.stabLossMult;
+          state.cargoHealth = Math.max(0, state.cargoHealth - excess * dt);
+        } else if (powerSpike > 110) {
+          state.cargoHealth = Math.max(0, state.cargoHealth - 6 * bagCfg.stabLossMult);
+          spawnFloatingText('TRANCÃO! -ESTAB', '#fb7185');
+        } else if (state.cadenceRpm >= 65 && state.cadenceRpm <= 90) {
+          // Cadência ideal estabiliza/recupera levemente
+          state.cargoHealth = Math.min(100, state.cargoHealth + 1.2 * dt);
+        }
+      } else if (order.type === 'market') {
+        // Mercado perde integridade apenas em solavancos extremos (> 46 km/h)
+        if (state.speedKmh > 46) {
+          state.cargoHealth = Math.max(0, state.cargoHealth - 2.5 * bagCfg.stabLossMult * dt);
+        }
+      }
+      state.prevPowerWatts = state.powerWatts;
+
+      // --- EVENTO 1: SEMÁFOROS ---
+      let activeAlert = null;
+      for (const light of state.trafficLights) {
+        // Ciclo do semáforo: Verde (6.5s) -> Amarelo (2.8s) -> Vermelho (5.5s)
+        light.timer -= dt;
+        if (light.timer <= 0) {
+          if (light.state === 'green') {
+            light.state = 'yellow';
+            light.timer = 2.8;
+          } else if (light.state === 'yellow') {
+            light.state = 'red';
+            light.timer = 5.5;
+          } else {
+            light.state = 'green';
+            light.timer = 6.5;
+          }
+        }
+
+        const distToLight = light.posM - state.distanceM;
+
+        // Aviso 100m antes
+        if (distToLight > 0 && distToLight <= 105 && !light.resolved) {
+          if (!light.warned) {
+            light.warned = true;
+            SoundFX.playAlert();
+          }
+          const stText = light.state === 'green' ? 'VERDE — Siga!' : light.state === 'yellow' ? 'AMARELO — Sprint ou Freie!' : 'VERMELHO — Pare (<5 km/h)!';
+          const bgCls = light.state === 'green' ? 'bg-emerald-600' : light.state === 'yellow' ? 'bg-amber-500 text-slate-950' : 'bg-rose-600';
+          activeAlert = {
+            icon: '🚦',
+            title: `SEMÁFORO A ${Math.ceil(distToLight)}m`,
+            sub: stText,
+            bgCls,
+          };
+
+          // Verifica se o jogador parou antes da faixa no vermelho
+          if (light.state === 'red' && distToLight <= 18 && state.speedKmh < 5) {
+            light.waitedAtRed = true;
+          }
+        }
+
+        // Verifica cruzamento da linha do semáforo
+        if (!light.resolved && prevDist < light.posM && state.distanceM >= light.posM) {
+          light.resolved = true;
+          if (light.state === 'red' && state.speedKmh >= 5) {
+            // Furou sinal vermelho!
+            state.runFines += 15;
+            state.combo = 1;
+            SoundFX.playFine();
+            spawnFloatingText('MULTA -R$15!', '#fb7185');
+            showToast('Sinal Vermelho!', 'Você furou o semáforo! Multa de R$ 15,00 e combo quebrado.', 'error');
+          } else if (light.waitedAtRed) {
+            state.runEventBonus += 5;
+            SoundFX.playCoin();
+            spawnFloatingText('RESPEITOU +R$5!', '#4ade80');
+          } else if (light.state === 'yellow') {
+            state.runEventBonus += 4;
+            SoundFX.playCoin();
+            spawnFloatingText('NO AMARELO +R$4!', '#fde047');
+          }
+        }
+      }
+
+      // --- EVENTO 2: CACHORRO CORRENDO ATRÁS ---
+      const dog = state.dogEvent;
+      if (dog && !dog.done) {
+        if (!dog.active && state.distanceM >= dog.triggerM) {
+          dog.active = true;
+          dog.dogOffsetX = -30;
+          SoundFX.playBark();
+        }
+        if (dog.active) {
+          dog.timeLeft -= dt;
+          if (state.powerWatts >= 200) {
+            dog.escapeProgress += dt;
+            dog.dogOffsetX = Math.max(-45, dog.dogOffsetX - 18 * dt);
+          } else {
+            dog.dogOffsetX = Math.min(48, dog.dogOffsetX + 22 * dt);
+          }
+
+          const pct = Math.min(100, Math.round((dog.escapeProgress / 4.2) * 100));
+          activeAlert = {
+            icon: '🐕',
+            title: `CACHORRO ATRÁS! (${pct}%)`,
+            sub: 'Mantenha +200W para despistar!',
+            bgCls: 'bg-orange-600',
+          };
+
+          if (dog.escapeProgress >= 4.2) {
+            dog.active = false;
+            dog.done = true;
+            state.runEventBonus += 10;
+            SoundFX.playCoin();
+            spawnFloatingText('DESPISTOU +R$10!', '#4ade80');
+            showToast('Cachorro Despistado!', 'Bônus de R$ 10,00 pelo sprint!', 'success');
+          } else if (dog.timeLeft <= 0) {
+            dog.active = false;
+            dog.done = true;
+            state.cargoHealth = Math.max(0, state.cargoHealth - 15);
+            state.timeLeftSec = Math.max(1, state.timeLeftSec - 4);
+            SoundFX.playBark();
+            spawnFloatingText('SUSTO! -15%', '#fb7185');
+          }
+        }
+      }
+
+      // Exibe/Oculta banner de alerta de evento no Canvas
+      if (activeAlert) {
+        dom.eventAlertOverlay.className = `absolute top-3 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-xl border-2 border-slate-950 shadow-xl flex items-center gap-3 animate-blink pointer-events-none ${activeAlert.bgCls}`;
+        dom.eventAlertIcon.textContent = activeAlert.icon;
+        dom.eventAlertTitle.textContent = activeAlert.title;
+        dom.eventAlertSub.textContent = activeAlert.sub;
+      } else {
+        dom.eventAlertOverlay.classList.add('hidden');
+      }
+
+      // --- CONDIÇÕES DE VITÓRIA / DERROTA ---
+      if (state.distanceM >= order.distanceM) {
+        finishDelivery(true);
+      } else if (state.timeLeftSec <= 0) {
+        finishDelivery(false);
+      }
+    }
+
+    // =========================================================================
+    // 7. RENDERIZADOR PIXEL ART PROCEDURAL (CANVAS 2D)
+    // =========================================================================
+    const PixelRenderer = {
+      ctx: dom.gameCanvas.getContext('2d'),
+      // Resolução lógica baixa para estética pixel art autêntica
+      W: 384,
+      H: 184,
+      stars: [],
+      buildingsFar: [],
+      buildingsNear: [],
+
+      init() {
+        dom.gameCanvas.width = this.W;
+        dom.gameCanvas.height = this.H;
+        this.ctx.imageSmoothingEnabled = false;
+
+        // Estrelas fixas para a noite
+        this.stars = Array.from({ length: 42 }, () => ({
+          x: Math.floor(Math.random() * this.W),
+          y: Math.floor(Math.random() * 82),
+          phase: Math.random() * Math.PI * 2,
+        }));
+
+        // Prédios distantes (paralaxe lenta)
+        let bx = 0;
+        for (let i = 0; i < 24; i++) {
+          const w = 18 + Math.floor(Math.random() * 20);
+          const h = 34 + Math.floor(Math.random() * 48);
+          this.buildingsFar.push({ x: bx, w, h, seed: i * 17 });
+          bx += w + 2;
+        }
+        this.farSpan = bx;
+
+        // Prédios médios (paralaxe média)
+        bx = 0;
+        for (let i = 0; i < 20; i++) {
+          const w = 24 + Math.floor(Math.random() * 22);
+          const h = 28 + Math.floor(Math.random() * 38);
+          const colors = ['#2b3152', '#353054', '#273a57', '#3f2e4f', '#26384a'];
+          this.buildingsNear.push({
+            x: bx,
+            w,
+            h,
+            color: colors[i % colors.length],
+            seed: i * 31,
+          });
+          bx += w + 5;
+        }
+        this.nearSpan = bx;
+      },
+
+      rect(x, y, w, h, color) {
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(Math.floor(x), Math.floor(y), Math.floor(w), Math.floor(h));
+      },
+
+      draw(nowSec) {
+        const ctx = this.ctx;
+        const W = this.W;
+        const H = this.H;
+        const day = DAY_PHASES[state.dayPhaseIndex];
+        const dist = state.worldScrollM;
+
+        // 1. CÉU EM BANDAS PIXEL ART (Dithering retrô)
+        this.rect(0, 0, W, 38, day.skyTop);
+        this.rect(0, 38, W, 38, day.skyMid);
+        this.rect(0, 76, W, 55, day.skyBot);
+
+        // Sol ou Lua pixelada
+        this.rect(308, day.sunY, 18, 18, day.sunColor);
+        this.rect(310, day.sunY - 2, 14, 22, day.sunColor);
+        this.rect(306, day.sunY + 2, 22, 14, day.sunColor);
+        if (day.isNight) {
+          // Cratera da lua
+          this.rect(312, day.sunY + 3, 4, 4, '#cbd5e1');
+          this.rect(319, day.sunY + 10, 3, 3, '#cbd5e1');
+          // Estrelas piscantes
+          for (const s of this.stars) {
+            const bright = Math.sin(nowSec * 3 + s.phase) > -0.2;
+            this.rect(s.x, s.y, 1, 1, bright ? '#f8fafc' : '#64748b');
+          }
+        } else {
+          // Nuvens pixeladas de dia / pôr do sol
+          const cloudColor = state.dayPhaseIndex === 1 ? '#fed7aa' : '#ffffff';
+          for (let i = 0; i < 4; i++) {
+            const cx = ((i * 115 - dist * 2.5) % (W + 60) + (W + 60)) % (W + 60) - 40;
+            const cy = 14 + (i % 2) * 16;
+            this.rect(cx, cy, 24, 6, cloudColor);
+            this.rect(cx + 4, cy - 4, 14, 4, cloudColor);
+          }
+        }
+
+        // 2. SKYLINE DISTANTE (PARALAXE LENTA)
+        const farShift = (dist * 3.5) % this.farSpan;
+        const farColor = day.isNight ? '#11162b' : (state.dayPhaseIndex === 1 ? '#3b1d4a' : '#475569');
+        for (let rep = -1; rep <= 1; rep++) {
+          for (const b of this.buildingsFar) {
+            const x = b.x - farShift + rep * this.farSpan;
+            if (x + b.w < 0 || x > W) continue;
+            this.rect(x, 128 - b.h, b.w, b.h, farColor);
+          }
+        }
+
+        // 3. PRÉDIOS URBANOS MÉDIOS COM JANELAS (PARALAXE MÉDIA)
+        const nearShift = (dist * 9.5) % this.nearSpan;
+        for (let rep = -1; rep <= 1; rep++) {
+          for (const b of this.buildingsNear) {
+            const x = b.x - nearShift + rep * this.nearSpan;
+            if (x + b.w < 0 || x > W) continue;
+            const yTop = 134 - b.h;
+            const bodyColor = day.isNight ? '#192038' : b.color;
+            this.rect(x, yTop, b.w, b.h + 10, bodyColor);
+            this.rect(x, yTop, b.w, 2, 'rgba(255,255,255,0.12)'); // telhado
+
+            // Janelas acesas à noite ou reflexo de dia
+            for (let wy = yTop + 5; wy < 126; wy += 7) {
+              for (let wx = x + 4; wx < x + b.w - 5; wx += 6) {
+                const lit = ((wx * 13 + wy * 7 + b.seed) % 5) !== 0;
+                if (day.isNight) {
+                  this.rect(wx, wy, 3, 4, lit ? '#fde047' : '#0f172a');
+                } else {
+                  this.rect(wx, wy, 3, 4, '#93c5fd');
+                }
+              }
+            }
+          }
+        }
+
+        // 4. MUNDO DA RUA + OBJETOS + CICLISTA (INCLINADO CONFORME A LADEIRA)
+        ctx.save();
+        const pivotX = 96;
+        const pivotY = 144;
+        ctx.translate(pivotX, pivotY);
+        ctx.rotate(-state.visualSlopeRad);
+
+        const span = 460;
+        const pxPerMeter = 14; // 1 metro = 14 pixels virtuais
+
+        // Calçada e meio-fio
+        this.rect(-span, -10, span * 2, 10, '#475569');
+        this.rect(-span, -2, span * 2, 2, '#94a3b8');
+
+        // Árvores e Postes de Luz em paralaxe rápida
+        this.drawStreetProps(dist, pxPerMeter, day.isNight);
+
+        // Asfalto da rua
+        this.rect(-span, 0, span * 2, 65, '#1e293b');
+        this.rect(-span, 2, span * 2, 1, '#334155');
+
+        // Faixas tracejadas amarelas da rua
+        const dashStep = 34;
+        const dashOffset = (dist * pxPerMeter) % dashStep;
+        for (let x = -span - dashOffset; x < span; x += dashStep) {
+          this.rect(x, 14, 14, 2, '#facc15');
+        }
+
+        // Semáforos da rota
+        if (state.phase === 'playing') {
+          for (const light of state.trafficLights) {
+            const lx = (light.posM - state.distanceM) * pxPerMeter;
+            if (lx > -160 && lx < 360) {
+              this.drawTrafficLight(lx, light.state);
+            }
+          }
+
+          // Casa do Cliente (Linha de chegada!)
+          const houseX = (state.currentOrder.distanceM - state.distanceM) * pxPerMeter;
+          if (houseX > -120 && houseX < 360) {
+            this.drawClientHouse(houseX, day.isNight);
+          }
+        }
+
+        // Farol da bicicleta à noite (cone de luz no asfalto)
+        if (day.isNight) {
+          ctx.fillStyle = 'rgba(254, 240, 138, 0.22)';
+          ctx.beginPath();
+          ctx.moveTo(14, -14);
+          ctx.lineTo(135, -24);
+          ctx.lineTo(135, 16);
+          ctx.lineTo(14, 2);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // Cachorro correndo atrás (se evento ativo)
+        if (state.dogEvent && state.dogEvent.active) {
+          this.drawPixelDog(-46 + state.dogEvent.dogOffsetX, 11, nowSec);
+        }
+
+        // Ciclista Pixel Art + Bicicleta
+        this.drawPixelCyclist(0, 12, day.isNight);
+
+        ctx.restore();
+
+        // 5. PARTÍCULAS DE VENTO (SPRINT)
+        for (const w of state.windParticles) {
+          this.rect(w.x, w.y, w.len, 1, 'rgba(224, 242, 254, 0.7)');
+        }
+
+        // 6. CONFETES DA CHEGADA
+        for (const c of state.confetti) {
+          this.rect(c.x, c.y, c.size, c.size, c.color);
+        }
+
+        // 7. TEXTOS FLUTUANTES (+R$, MULTA, ETC.)
+        ctx.font = 'bold 9px "Press Start 2P", monospace';
+        ctx.textAlign = 'center';
+        for (const ft of state.floatingTexts) {
+          ctx.fillStyle = '#090b14';
+          ctx.fillText(ft.text, Math.floor(ft.x) + 1, Math.floor(ft.y) + 1);
+          ctx.fillStyle = ft.color;
+          ctx.fillText(ft.text, Math.floor(ft.x), Math.floor(ft.y));
+        }
+      },
+
+      drawStreetProps(distM, pxPerMeter, isNight) {
+        const spacing = 78;
+        const shift = (distM * pxPerMeter) % spacing;
+        const baseIdx = Math.floor((distM * pxPerMeter) / spacing);
+
+        for (let i = -3; i <= 7; i++) {
+          const idx = baseIdx + i;
+          const x = i * spacing - shift;
+
+          if (Math.abs(idx) % 2 === 0) {
+            // Poste de luz pixel art
+            this.rect(x, -48, 2, 42, '#64748b');
+            this.rect(x, -48, 8, 2, '#64748b');
+            this.rect(x + 6, -46, 3, 2, isNight ? '#fef08a' : '#cbd5e1');
+            if (isNight) {
+              this.ctx.fillStyle = 'rgba(254, 240, 138, 0.12)';
+              this.ctx.beginPath();
+              this.ctx.moveTo(x + 7, -44);
+              this.ctx.lineTo(x - 10, 6);
+              this.ctx.lineTo(x + 24, 6);
+              this.ctx.closePath();
+              this.ctx.fill();
+            }
+          } else {
+            // Árvore pixel art
+            this.rect(x, -20, 4, 14, '#78350f');
+            this.rect(x - 6, -34, 16, 14, '#15803d');
+            this.rect(x - 4, -38, 12, 6, '#22c55e');
+            this.rect(x - 2, -32, 4, 4, '#4ade80');
+          }
+        }
+      },
+
+      drawTrafficLight(x, lightState) {
+        // Faixa de parada branca no asfalto
+        this.rect(x - 2, 0, 4, 28, '#f8fafc');
+        // Poste do semáforo
+        this.rect(x + 2, -52, 3, 46, '#334155');
+        // Caixa das luzes
+        this.rect(x - 2, -62, 11, 24, '#0f172a');
+        this.rect(x - 1, -61, 9, 22, '#1e293b');
+        // Luzes (Vermelho, Amarelo, Verde)
+        this.rect(x + 1, -59, 5, 5, lightState === 'red' ? '#ef4444' : '#450a0a');
+        this.rect(x + 1, -52, 5, 5, lightState === 'yellow' ? '#facc15' : '#422006');
+        this.rect(x + 1, -45, 5, 5, lightState === 'green' ? '#22c55e' : '#052e16');
+      },
+
+      drawClientHouse(x, isNight) {
+        // Bandeira quadriculada no chão
+        for (let row = 0; row < 6; row++) {
+          this.rect(x - 4, row * 4, 4, 4, row % 2 === 0 ? '#ffffff' : '#090b14');
+          this.rect(x, row * 4, 4, 4, row % 2 === 1 ? '#ffffff' : '#090b14');
+        }
+        // Casa pixel art na calçada
+        this.rect(x + 6, -42, 34, 34, '#e2e8f0');
+        // Telhado
+        this.rect(x + 2, -46, 42, 6, '#dc2626');
+        this.rect(x + 8, -52, 30, 6, '#b91c1c');
+        // Porta
+        this.rect(x + 12, -24, 9, 16, '#78350f');
+        // Janela
+        this.rect(x + 25, -34, 10, 10, isNight ? '#fde047' : '#38bdf8');
+        // Placa "CLIENTE"
+        this.rect(x + 8, -62, 30, 8, '#22c55e');
+        this.ctx.fillStyle = '#052e16';
+        this.ctx.font = 'bold 5px monospace';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('ENTREGA', x + 23, -56);
+      },
+
+      drawPixelDog(x, y, nowSec) {
+        const legStep = Math.sin(nowSec * 22) > 0 ? 2 : -2;
+        // Sombra
+        this.rect(x - 2, y + 1, 16, 2, 'rgba(0,0,0,0.45)');
+        // Corpo caramelo
+        this.rect(x, y - 8, 12, 6, '#d97706');
+        // Cabeça + orelha
+        this.rect(x + 10, y - 12, 6, 6, '#f59e0b');
+        this.rect(x + 10, y - 13, 3, 2, '#78350f');
+        this.rect(x + 14, y - 10, 1, 1, '#090b14'); // olho
+        this.rect(x + 16, y - 9, 2, 2, '#090b14');  // focinho
+        // Rabo abanando
+        this.rect(x - 3, y - 10 + (legStep > 0 ? 1 : 0), 3, 2, '#b45309');
+        // Patas correndo
+        this.rect(x + 1 + legStep, y - 2, 2, 4, '#92400e');
+        this.rect(x + 9 - legStep, y - 2, 2, 4, '#92400e');
+      },
+
+      drawPixelCyclist(x, groundY, isNight) {
+        const ctx = this.ctx;
+        const frameColor = UPGRADE_CONFIG.frame.levels[state.upgrades.frame].color;
+        const bagColor = UPGRADE_CONFIG.bag.levels[state.upgrades.bag].color;
+        const bob = state.speedKmh > 2 ? Math.round(Math.sin(state.crankAngle * 2) * 0.8) : 0;
+
+        // Sombra no asfalto
+        this.rect(x - 18, groundY, 38, 3, 'rgba(0,0,0,0.45)');
+
+        // Rodas pixel art
+        this.drawPixelWheel(x - 13, groundY - 7, 7, state.wheelAngle);
+        this.drawPixelWheel(x + 14, groundY - 7, 7, state.wheelAngle);
+
+        // Perna traseira (sincronizada com pedivela +180°)
+        const pL_x = x - 1 + Math.round(Math.cos(state.crankAngle + Math.PI) * 5);
+        const pL_y = groundY - 7 + Math.round(Math.sin(state.crankAngle + Math.PI) * 5);
+        this.drawPixelLeg(x - 6, groundY - 21 + bob, pL_x, pL_y, '#0f766e');
+
+        // Quadro da bicicleta
+        ctx.strokeStyle = frameColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - 13, groundY - 7);
+        ctx.lineTo(x - 1, groundY - 7);
+        ctx.lineTo(x - 6, groundY - 19);
+        ctx.lineTo(x + 10, groundY - 19);
+        ctx.lineTo(x - 1, groundY - 7);
+        ctx.moveTo(x + 10, groundY - 19);
+        ctx.lineTo(x + 14, groundY - 7);
+        ctx.stroke();
+
+        // Guidão e farol
+        this.rect(x + 9, groundY - 22, 5, 2, '#cbd5e1');
+        if (isNight) {
+          this.rect(x + 13, groundY - 20, 3, 2, '#fef08a');
+        }
+
+        // Selim
+        this.rect(x - 9, groundY - 21, 6, 2, '#f8fafc');
+
+        // Mochila de Entregador (muda cor com upgrade!)
+        this.rect(x - 16, groundY - 34 + bob, 11, 13, '#090b14');
+        this.rect(x - 15, groundY - 33 + bob, 9, 11, bagColor);
+        // Faixa refletiva na mochila
+        this.rect(x - 15, groundY - 27 + bob, 9, 2, '#f8fafc');
+
+        // Tronco do ciclista
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(x - 6, groundY - 21 + bob);
+        ctx.lineTo(x + 4, groundY - 31 + bob);
+        ctx.stroke();
+
+        // Braço
+        ctx.strokeStyle = '#fde68a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + 4, groundY - 30 + bob);
+        ctx.lineTo(x + 11, groundY - 21);
+        ctx.stroke();
+
+        // Cabeça + Capacete
+        this.rect(x + 3, groundY - 37 + bob, 6, 6, '#fde68a');
+        this.rect(x + 2, groundY - 39 + bob, 8, 3, '#facc15'); // capacete
+        this.rect(x + 7, groundY - 36 + bob, 3, 2, '#090b14'); // óculos
+
+        // Perna dianteira (sincronizada com pedivela)
+        const pR_x = x - 1 + Math.round(Math.cos(state.crankAngle) * 5);
+        const pR_y = groundY - 7 + Math.round(Math.sin(state.crankAngle) * 5);
+        this.drawPixelLeg(x - 6, groundY - 21 + bob, pR_x, pR_y, '#14b8a6');
+      },
+
+      drawPixelWheel(cx, cy, r, angle) {
+        const ctx = this.ctx;
+        ctx.strokeStyle = '#090b14';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 4; i++) {
+          const a = angle + (i * Math.PI) / 2;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(cx + Math.cos(a) * (r - 1), cy + Math.sin(a) * (r - 1));
+          ctx.stroke();
+        }
+        this.rect(cx - 1, cy - 1, 2, 2, '#38bdf8');
+      },
+
+      drawPixelLeg(hx, hy, fx, fy, color) {
+        const ctx = this.ctx;
+        const kx = Math.round((hx + fx) * 0.5 + 3);
+        const ky = Math.round((hy + fy) * 0.5 - 2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(hx, hy);
+        ctx.lineTo(kx, ky);
+        ctx.lineTo(fx, fy);
+        ctx.stroke();
+        this.rect(fx - 1, fy - 1, 4, 2, '#f8fafc'); // tênis
+      },
+    };
+
+    // =========================================================================
+    // 8. ATUALIZAÇÃO DE UI & CONTROLES
+    // =========================================================================
+    function updateTopHUD() {
+      const day = DAY_PHASES[state.dayPhaseIndex];
+      dom.dayCycleBadge.textContent = `${day.icon} ${day.name}`;
+      dom.hudMoney.textContent = formatMoney(state.money);
+      dom.hudCombo.textContent = `x${state.combo}`;
+      dom.hudDeliveries.textContent = state.deliveriesDone;
+    }
+
+    function updateConnectionUI() {
+      if (state.btConnected && !state.isSimulator) {
+        dom.btStatusMini.textContent = `BT: ${state.btDeviceName}`;
+        dom.btStatusMini.className = 'text-emerald-400';
+        dom.btnBluetoothLabel.textContent = 'Desconectar';
+        dom.btnBluetooth.className = 'pixel-btn px-2.5 py-1.5 rounded-lg bg-rose-600 text-white text-[10px] sm:text-xs font-arcade flex items-center gap-1.5';
+      } else if (state.isSimulator) {
+        dom.btStatusMini.textContent = 'Simulador ON';
+        dom.btStatusMini.className = 'text-amber-300';
+        dom.btnBluetoothLabel.textContent = state.btConnected ? 'Desconectar' : 'Sensor BT';
+        dom.btnBluetooth.className = 'pixel-btn px-2.5 py-1.5 rounded-lg bg-blue-600 text-white text-[10px] sm:text-xs font-arcade flex items-center gap-1.5';
+      } else {
+        dom.btStatusMini.textContent = 'Sem Sensor';
+        dom.btStatusMini.className = 'text-slate-400';
+      }
+    }
+
+    function setSimulatorMode(enabled) {
+      state.isSimulator = enabled;
+      if (enabled) {
+        dom.btnToggleSimLabel.textContent = 'SIM: ON';
+        dom.btnToggleSim.className = 'pixel-btn px-2.5 py-1.5 rounded-lg bg-amber-500 text-slate-950 text-[10px] sm:text-xs font-arcade';
+        dom.simSlidersContainer.classList.remove('opacity-40', 'pointer-events-none');
+        dom.simPresetsContainer.classList.remove('opacity-40', 'pointer-events-none');
+      } else {
+        dom.btnToggleSimLabel.textContent = 'SIM: OFF';
+        dom.btnToggleSim.className = 'pixel-btn px-2.5 py-1.5 rounded-lg bg-slate-700 text-slate-200 text-[10px] sm:text-xs font-arcade';
+        dom.simSlidersContainer.classList.add('opacity-40', 'pointer-events-none');
+        dom.simPresetsContainer.classList.add('opacity-40', 'pointer-events-none');
+        if (!state.btConnected) {
+          state.powerWatts = 0;
+          state.cadenceRpm = 0;
+        }
+      }
+      updateConnectionUI();
+    }
+
+    function setSimValues(watts, rpm) {
+      state.simPower = Math.max(0, Math.min(500, Math.round(watts)));
+      state.simCadence = Math.max(0, Math.min(130, Math.round(rpm)));
+      dom.sliderPower.value = state.simPower;
+      dom.sliderPowerText.textContent = `${state.simPower} W`;
+      dom.sliderCadence.value = state.simCadence;
+      dom.sliderCadenceText.textContent = `${state.simCadence} RPM`;
+    }
+
+    function updateLiveHUD() {
+      dom.telPower.textContent = Math.round(state.powerWatts);
+      dom.telCadence.textContent = Math.round(state.cadenceRpm);
+      dom.telSpeed.textContent = state.speedKmh.toFixed(1);
+
+      const s = state.slopePercent;
+      dom.hudSlope.textContent = `${s > 0 ? '+' : ''}${s.toFixed(1)}%`;
+      dom.hudSlope.className = `font-arcade text-[10px] sm:text-xs tabular-nums ${s >= 5 ? 'text-rose-400' : s > 0 ? 'text-amber-300' : s < 0 ? 'text-cyan-300' : 'text-emerald-400'}`;
+
+      if (state.currentOrder) {
+        const d = Math.min(state.distanceM, state.currentOrder.distanceM);
+        const pct = Math.min(100, (d / state.currentOrder.distanceM) * 100);
+        dom.hudDistanceText.textContent = `${Math.floor(d)}m / ${state.currentOrder.distanceM}m`;
+        dom.progressBarFill.style.width = `${pct}%`;
+
+        dom.hudTimer.textContent = formatClock(state.timeLeftSec);
+        dom.hudTimer.className = `font-arcade text-sm sm:text-base tabular-nums mt-0.5 ${state.timeLeftSec <= 15 ? 'text-rose-400 animate-pulse' : 'text-white'}`;
+
+        const health = Math.round(state.cargoHealth);
+        dom.hudCargoMetricVal.textContent = `${health}%`;
+        dom.hudCargoMetricBar.style.width = `${health}%`;
+      }
+    }
+
+    function bindEvents() {
+      // Botão Som 8-bit
+      dom.btnSound.addEventListener('click', () => {
+        SoundFX.enabled = !SoundFX.enabled;
+        dom.btnSound.textContent = SoundFX.enabled ? '🔊' : '🔇';
+        if (SoundFX.enabled) SoundFX.playBell();
+      });
+
+      // Botão Bluetooth
+      dom.btnBluetooth.addEventListener('click', () => {
+        if (state.btConnected) BluetoothManager.disconnect();
+        else BluetoothManager.connect();
+      });
+
+      // Botão Simulador ON/OFF
+      dom.btnToggleSim.addEventListener('click', () => setSimulatorMode(!state.isSimulator));
+
+      // Botões da Loja
+      dom.btnOpenShopTop.addEventListener('click', openShop);
+      dom.btnOpenShopFromModal.addEventListener('click', openShop);
+      dom.btnSummaryShop.addEventListener('click', openShop);
+      dom.btnCloseShop.addEventListener('click', closeShop);
+
+      // Botão Novos Pedidos e Próximo Pedido
+      dom.btnRerollOrders.addEventListener('click', () => {
+        SoundFX.playCoin();
+        generateOrders();
+      });
+
+      dom.btnSummaryNext.addEventListener('click', () => {
+        dom.modalSummary.classList.add('hidden');
+        state.phase = 'orders';
+        generateOrders();
+        dom.modalOrders.classList.remove('hidden');
+      });
+
+      // Sliders do Simulador
+      dom.sliderPower.addEventListener('input', (e) => {
+        const w = Number(e.target.value);
+        // Ajusta cadência proporcionalmente se estava zerada
+        const rpm = w === 0 ? 0 : (state.simCadence === 0 ? 78 : state.simCadence);
+        setSimValues(w, rpm);
+      });
+
+      dom.sliderCadence.addEventListener('input', (e) => {
+        setSimValues(state.simPower, Number(e.target.value));
+      });
+
+      // Botões rápidos de ritmo
+      document.querySelectorAll('.pace-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const pace = btn.dataset.pace;
+          if (pace === 'stop')   setSimValues(0, 0);
+          if (pace === 'cruise') setSimValues(120, 76);
+          if (pace === 'hard')   setSimValues(240, 88);
+          if (pace === 'sprint') setSimValues(380, 108);
+        });
+      });
+
+      // Atalhos de Teclado (W/S ou Setas Cima/Baixo + Espaço para Sprint)
+      window.addEventListener('keydown', (e) => {
+        if (!state.isSimulator) return;
+        if (e.code === 'ArrowUp' || e.code === 'KeyW') {
+          e.preventDefault();
+          const nw = Math.min(500, state.simPower + 20);
+          const nr = nw > 0 ? Math.max(68, Math.min(125, Math.round(62 + nw * 0.13))) : 0;
+          setSimValues(nw, nr);
+        } else if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+          e.preventDefault();
+          const nw = Math.max(0, state.simPower - 20);
+          const nr = nw === 0 ? 0 : Math.max(55, Math.round(62 + nw * 0.13));
+          setSimValues(nw, nr);
+        } else if (e.code === 'Space') {
+          e.preventDefault();
+          state.spaceSprintActive = true;
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        if (e.code === 'Space') {
+          state.spaceSprintActive = false;
+        }
+      });
+    }
+
+    // =========================================================================
+    // 9. LOOP PRINCIPAL (60 FPS)
+    // =========================================================================
+    let lastTime = performance.now();
+
+    function gameLoop(now) {
+      const dt = Math.min(0.1, (now - lastTime) / 1000);
+      lastTime = now;
+
+      updateGame(dt);
+      PixelRenderer.draw(now / 1000);
+      updateLiveHUD();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    window.onload = function () {
+      PixelRenderer.init();
+      bindEvents();
+      setSimValues(160, 82);
+      updateTopHUD();
+      updateConnectionUI();
+      generateOrders();
+      lastTime = performance.now();
+      requestAnimationFrame(gameLoop);
+    };
+  </script>
+</body>
+</html>
